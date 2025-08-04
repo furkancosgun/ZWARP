@@ -97,7 +97,7 @@ CLASS lcl_model IMPLEMENTATION.
                                     ( object_clas = 'R3TR' object_type = 'TABL' )
                                     ( object_clas = 'R3TR' object_type = 'TTYP' )
                                     ( object_clas = 'R3TR' object_type = 'VIEW' )
-                                    ( object_clas = 'LIMU' object_type = 'STRU' object_conv = 'TABL' )
+                                    ( object_clas = 'R3TR' object_type = 'STRU' object_conv = 'TABL' )
                                     ( object_clas = 'R3TR' object_type = 'ENQU' ) ).
   ENDMETHOD.
 
@@ -130,6 +130,16 @@ CLASS lcl_model IMPLEMENTATION.
       INTO CORRESPONDING FIELDS OF TABLE @rt_objects
       WHERE object   IN @it_object_types
         AND obj_name IN @it_object_names.
+    IF sy-subrc NE 0.
+      LOOP AT it_object_types ASSIGNING FIELD-SYMBOL(<fs_types>).
+        LOOP AT it_object_names ASSIGNING FIELD-SYMBOL(<fs_names>).
+          APPEND VALUE #(
+            object_type = <fs_types>-low
+            object_name = <fs_names>-low
+          ) TO rt_objects.
+        ENDLOOP.
+      ENDLOOP.
+    ENDIF.
   ENDMETHOD.
 
   METHOD expand_with_environment.
@@ -288,8 +298,8 @@ DATA report TYPE ty_report.
 TABLES e071.
 
 SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE b1_title.
-SELECT-OPTIONS s_type FOR e071-object   OBLIGATORY DEFAULT 'PROG'.
-SELECT-OPTIONS s_name FOR e071-obj_name OBLIGATORY DEFAULT sy-repid.
+SELECT-OPTIONS s_type FOR e071-object   OBLIGATORY DEFAULT 'PROG' NO INTERVALS.
+SELECT-OPTIONS s_name FOR e071-obj_name OBLIGATORY DEFAULT sy-repid NO INTERVALS.
 SELECTION-SCREEN END OF BLOCK b1.
 
 INITIALIZATION.
@@ -434,7 +444,7 @@ FORM f_user_command USING iv_ucomm  TYPE sy-ucomm
              TRANSPORTING checkbox
              WHERE checkbox = abap_true.
     WHEN '&TRANS'.
-      lcl_model=>transport_objects( EXPORTING  it_objects      = CORRESPONDING #( report-data )
+      lcl_model=>transport_objects( EXPORTING  it_objects      = CORRESPONDING #( VALUE tt_data( FOR data IN report-data WHERE ( checkbox  = abap_true ) ( data ) ) )
                                     RECEIVING  rv_request      = DATA(lv_request)
                                     EXCEPTIONS transport_error = 1
                                                OTHERS          = 2 ).
